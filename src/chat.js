@@ -1,19 +1,44 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+import { initBridge } from './browser-bridge.js';
 
 const WS_URL = 'ws://localhost:8768';
 
 let ws = null;
 let reconnectTimer = null;
 let terminalCounter = 0;
+let bridgeHandler = null;
 
 // Map of id → { terminal, fitAddon, containerEl, tabEl }
 const terminals = new Map();
 let activeId = null;
 
+const SESSION_KEY = 'sidebar_terminal_session';
+
 function generateId() {
   return crypto.randomUUID();
+}
+
+function saveSession() {
+  const terminalList = [];
+  for (const [id, entry] of terminals) {
+    terminalList.push({ id, label: entry.label });
+  }
+  const session = { terminals: terminalList, activeId, counter: terminalCounter };
+  chrome.storage.local.set({ [SESSION_KEY]: session });
+}
+
+async function loadSession() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(SESSION_KEY, (result) => {
+      resolve(result[SESSION_KEY] || null);
+    });
+  });
+}
+
+function clearSession() {
+  chrome.storage.local.remove(SESSION_KEY);
 }
 
 function getThemeColors() {
@@ -134,6 +159,7 @@ function createTerminal() {
     ws.send(JSON.stringify({ type: 'spawn', id, cols: dims.cols, rows: dims.rows }));
   }
 
+  saveSession();
   return id;
 }
 
@@ -155,6 +181,8 @@ function switchTerminal(id) {
     entry.fitAddon.fit();
     entry.terminal.focus();
   }, 10);
+
+  saveSession();
 }
 
 function closeTerminal(id) {
@@ -180,6 +208,70 @@ function closeTerminal(id) {
     const nextId = terminals.keys().next().value;
     switchTerminal(nextId);
   }
+
+  saveSession();
+}
+
+// Restore a terminal instance from saved session (creates xterm + tab, no PTY spawn)
+function restoreTerminalInstance(id, label) {
+  const container = document.getElementById('terminal-container');
+
+  const paneEl = document.createElement('div');
+  paneEl.className = 'terminal-pane';
+  paneEl.dataset.terminalId = id;
+  container.appendChild(paneEl);
+
+  const theme = getThemeColors();
+  const terminal = new Terminal({
+    fontSize: 13,
+    fontFamily: "'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace",
+    lineHeight: 1.4,
+    cursorBlink: true,
+    cursorStyle: 'bar',
+    scrollback: 5000,
+    theme,
+    allowProposedApi: true,
+  });
+
+  const fitAddon = new FitAddon();
+  terminal.loadAddon(fitAddon);
+  terminal.open(paneEl);
+
+  terminal.onData((data) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'input', id, data }));
+    }
+  });
+
+  terminal.onResize(({ cols, rows }) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'resize', id, cols, rows }));
+    }
+  });
+
+  const resizeObserver = new ResizeObserver(() => {
+    if (activeId === id && fitAddon) {
+      fitAddon.fit();
+    }
+  });
+  resizeObserver.observe(paneEl);
+
+  const tabEl = document.createElement('button');
+  tabEl.className = 'terminal-tab';
+  tabEl.dataset.terminalId = id;
+  tabEl.innerHTML = `<span class="tab-label">${label}</span><span class="close-btn" title="Close terminal">\u00d7</span>`;
+
+  tabEl.addEventListener('click', (e) => {
+    if (e.target.closest('.close-btn')) {
+      closeTerminal(id);
+    } else {
+      switchTerminal(id);
+    }
+  });
+
+  document.getElementById('terminal-tab-list').appendChild(tabEl);
+
+  terminals.set(id, { terminal, fitAddon, containerEl: paneEl, tabEl, resizeObserver, label });
 }
 
 function showStatus(text, isError = false) {
@@ -202,23 +294,49 @@ function connect() {
 
   ws = new WebSocket(WS_URL);
 
-  ws.onopen = () => {
+  ws.onopen = async () => {
     hideStatus();
     if (reconnectTimer) {
       clearInterval(reconnectTimer);
       reconnectTimer = null;
     }
 
-    // Spawn PTYs for all existing terminals
-    for (const [id, entry] of terminals) {
-      const dims = entry.fitAddon.proposeDimensions() || { cols: 80, rows: 24 };
-      ws.send(JSON.stringify({ type: 'spawn', id, cols: dims.cols, rows: dims.rows }));
+    // Register as browser bridge
+    bridgeHandler = initBridge(ws);
+
+    // If we already have terminals in memory (WS reconnect), re-attach them
+    if (terminals.size > 0) {
+      for (const [id, entry] of terminals) {
+        const dims = entry.fitAddon.proposeDimensions() || { cols: 80, rows: 24 };
+        ws.send(JSON.stringify({ type: 'spawn', id, cols: dims.cols, rows: dims.rows }));
+      }
+      return;
     }
 
-    // Create first terminal if none exist
-    if (terminals.size === 0) {
-      createTerminal();
+    // Try to restore a saved session
+    const session = await loadSession();
+    if (session && session.terminals && session.terminals.length > 0) {
+      terminalCounter = session.counter || session.terminals.length;
+      // Recreate xterm instances + tabs from saved session
+      for (const saved of session.terminals) {
+        restoreTerminalInstance(saved.id, saved.label);
+      }
+      // Switch to saved active tab
+      if (session.activeId && terminals.has(session.activeId)) {
+        switchTerminal(session.activeId);
+      } else {
+        switchTerminal(terminals.keys().next().value);
+      }
+      // Send spawn for each (server will re-attach if alive, or create new)
+      for (const [id, entry] of terminals) {
+        const dims = entry.fitAddon.proposeDimensions() || { cols: 80, rows: 24 };
+        ws.send(JSON.stringify({ type: 'spawn', id, cols: dims.cols, rows: dims.rows }));
+      }
+      return;
     }
+
+    // No saved session — create first terminal
+    createTerminal();
   };
 
   ws.onmessage = (event) => {
@@ -226,6 +344,12 @@ function connect() {
     try {
       msg = JSON.parse(event.data);
     } catch {
+      return;
+    }
+
+    // Route browser commands to bridge handler
+    if (bridgeHandler && msg.type === 'browser-cmd') {
+      bridgeHandler(msg);
       return;
     }
 
@@ -254,12 +378,20 @@ function connect() {
           entry.terminal.focus();
         }
         break;
+      case 'attached':
+        // Process was re-attached; buffer replay comes as 'output' messages
+        if (entry && msg.id === activeId) {
+          entry.terminal.focus();
+        }
+        break;
     }
   };
 
   ws.onclose = () => {
     showStatus('Terminal server not running. Start it with: cd terminal-server && npm start', true);
     ws = null;
+    // Save session so we can restore on reconnect
+    saveSession();
     if (!reconnectTimer) {
       reconnectTimer = setInterval(connect, 3000);
     }

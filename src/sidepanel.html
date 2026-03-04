@@ -44,6 +44,12 @@
             <line x1="3.3" y1="14.7" x2="4.7" y2="13.3"/><line x1="13.3" y1="4.7" x2="14.7" y2="3.3"/>
           </svg>
         </button>
+        <button id="btn-ai" class="icon-btn" title="AI Chat">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 2l1.5 3.5L14 7l-3.5 1.5L9 12l-1.5-3.5L4 7l3.5-1.5z"/>
+            <path d="M14 12l.75 1.75L16.5 14.5l-1.75.75L14 17l-.75-1.75L11.5 14.5l1.75-.75z" opacity="0.6"/>
+          </svg>
+        </button>
         <button id="btn-more" class="icon-btn" title="More options">
           <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
             <circle cx="9" cy="4" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="9" cy="14" r="1.5"/>
@@ -90,6 +96,11 @@
           <path d="M8 6a3 3 0 00-4-1L3 6a3 3 0 000 4l0 0a3 3 0 004 0l1-1"/>
         </svg>
       </button>
+      <span class="toolbar-divider"></span>
+      <button data-ai-action="rewrite" title="Rewrite selection">Rewrite</button>
+      <button data-ai-action="summarize" title="Summarize selection">Summarize</button>
+      <button data-ai-action="expand" title="Expand selection">Expand</button>
+      <button data-ai-action="fixGrammar" title="Fix grammar">Fix Grammar</button>
     </div>
 
     <!-- Note List Panel -->

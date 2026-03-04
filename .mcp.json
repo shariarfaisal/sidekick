@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "browser-control": {
+      "command": "node",
+      "args": ["terminal-server/mcp-server.js"],
+      "cwd": "."
+    }
+  }
+}

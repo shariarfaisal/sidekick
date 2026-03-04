@@ -1,0 +1,293 @@
+#!/usr/bin/env bash
+# browser — CLI wrapper for browser control via the terminal server
+# Usage: browser <command> [args...]
+
+set -euo pipefail
+
+BASE_URL="http://localhost:8768/api"
+
+usage() {
+  cat <<'EOF'
+Usage: browser <command> [args...]
+
+Commands:
+  eval <code>             Run JavaScript in the active tab
+  dom <selector>          Get outerHTML of matched elements
+  click <selector>        Click an element
+  type <selector> <text>  Type text into an input element
+  screenshot              Capture visible tab as PNG (saves to file)
+  url                     Get active tab URL and title
+  console                 Get captured console logs
+  navigate <url>          Navigate active tab to URL
+  content                 Get page text content
+  interactive             List interactive elements (buttons, links, inputs)
+  tabs                    List all open browser tabs
+  close-tab [tabId]       Close a tab (active tab if no ID)
+  back                    Go back in history
+  forward                 Go forward in history
+  keyboard <key> [mods]   Press a key (mods: ctrl,shift,alt,meta)
+  hover <selector>        Hover over an element
+  wait <selector|text>    Wait for element/text to appear
+  fill-form <json>        Fill multiple form fields
+  network                 Get captured network requests
+  notes                   List all notes
+  notes-get <id>          Get full note content + image IDs
+  notes-create [title]    Create a new note
+  notes-update <id> <md>  Update note content
+  notes-delete <id>       Delete a note
+  notes-image <imageId>   Get image as base64 PNG
+  notes-search <query>    Search notes
+
+Examples:
+  browser eval "document.title"
+  browser dom "h1"
+  browser click ".btn-submit"
+  browser type "#search" "hello world"
+  browser screenshot
+  browser url
+  browser content
+  browser interactive
+  browser tabs
+  browser back
+  browser keyboard Enter
+  browser keyboard a ctrl,shift
+  browser hover ".menu-item"
+  browser wait ".loaded"
+  browser fill-form '[{"selector":"#name","value":"John"},{"selector":"#email","value":"j@x.com"}]'
+  browser network
+  browser notes
+  browser notes-get "abc123"
+  browser notes-search "meeting"
+  browser notes-image "img_xyz_abc"
+  browser navigate "https://example.com"
+EOF
+  exit 1
+}
+
+[[ $# -lt 1 ]] && usage
+
+CMD="$1"
+shift
+
+case "$CMD" in
+  eval)
+    [[ $# -lt 1 ]] && { echo "Error: missing code argument"; exit 1; }
+    curl -s -X POST "$BASE_URL/eval" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg code "$1" '{code: $code}')"
+    echo
+    ;;
+
+  dom)
+    [[ $# -lt 1 ]] && { echo "Error: missing selector argument"; exit 1; }
+    curl -s -X POST "$BASE_URL/dom" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg selector "$1" '{selector: $selector}')"
+    echo
+    ;;
+
+  click)
+    [[ $# -lt 1 ]] && { echo "Error: missing selector argument"; exit 1; }
+    curl -s -X POST "$BASE_URL/click" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg selector "$1" '{selector: $selector}')"
+    echo
+    ;;
+
+  type)
+    [[ $# -lt 2 ]] && { echo "Error: missing selector and/or text arguments"; exit 1; }
+    curl -s -X POST "$BASE_URL/type" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg selector "$1" --arg text "$2" '{selector: $selector, text: $text}')"
+    echo
+    ;;
+
+  screenshot)
+    TMPFILE="$(mktemp /tmp/screenshot-XXXXXX.png)"
+    RESPONSE=$(curl -s "$BASE_URL/screenshot")
+    ERROR=$(echo "$RESPONSE" | jq -r '.error // empty')
+    if [[ -n "$ERROR" ]]; then
+      echo "Error: $ERROR"
+      rm -f "$TMPFILE"
+      exit 1
+    fi
+    echo "$RESPONSE" | jq -r '.screenshot' | base64 -d > "$TMPFILE"
+    echo "Screenshot saved to: $TMPFILE"
+    ;;
+
+  url)
+    curl -s "$BASE_URL/url"
+    echo
+    ;;
+
+  console)
+    curl -s "$BASE_URL/console"
+    echo
+    ;;
+
+  navigate)
+    [[ $# -lt 1 ]] && { echo "Error: missing url argument"; exit 1; }
+    curl -s -X POST "$BASE_URL/navigate" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg url "$1" '{url: $url}')"
+    echo
+    ;;
+
+  content)
+    curl -s "$BASE_URL/content"
+    echo
+    ;;
+
+  interactive)
+    curl -s "$BASE_URL/interactive"
+    echo
+    ;;
+
+  tabs)
+    curl -s "$BASE_URL/tabs"
+    echo
+    ;;
+
+  close-tab)
+    if [[ $# -ge 1 ]]; then
+      curl -s -X POST "$BASE_URL/close_tab" \
+        -H 'Content-Type: application/json' \
+        -d "{\"tabId\":$1}"
+    else
+      curl -s -X POST "$BASE_URL/close_tab" \
+        -H 'Content-Type: application/json' \
+        -d '{}'
+    fi
+    echo
+    ;;
+
+  back)
+    curl -s -X POST "$BASE_URL/back" -H 'Content-Type: application/json' -d '{}'
+    echo
+    ;;
+
+  forward)
+    curl -s -X POST "$BASE_URL/forward" -H 'Content-Type: application/json' -d '{}'
+    echo
+    ;;
+
+  keyboard)
+    [[ $# -lt 1 ]] && { echo "Error: missing key argument"; exit 1; }
+    KEY="$1"
+    MODS="[]"
+    if [[ $# -ge 2 ]]; then
+      MODS=$(echo "$2" | jq -R 'split(",")')
+    fi
+    curl -s -X POST "$BASE_URL/keyboard" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg key "$KEY" --argjson modifiers "$MODS" '{key: $key, modifiers: $modifiers}')"
+    echo
+    ;;
+
+  hover)
+    [[ $# -lt 1 ]] && { echo "Error: missing selector argument"; exit 1; }
+    curl -s -X POST "$BASE_URL/hover" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg selector "$1" '{selector: $selector}')"
+    echo
+    ;;
+
+  wait)
+    [[ $# -lt 1 ]] && { echo "Error: missing selector or text argument"; exit 1; }
+    # If starts with . # or [ treat as selector, otherwise as text
+    if [[ "$1" =~ ^[.#\[] ]]; then
+      curl -s -X POST "$BASE_URL/wait" \
+        -H 'Content-Type: application/json' \
+        -d "$(jq -n --arg selector "$1" '{selector: $selector}')"
+    else
+      curl -s -X POST "$BASE_URL/wait" \
+        -H 'Content-Type: application/json' \
+        -d "$(jq -n --arg text "$1" '{text: $text}')"
+    fi
+    echo
+    ;;
+
+  fill-form)
+    [[ $# -lt 1 ]] && { echo "Error: missing fields JSON argument"; exit 1; }
+    curl -s -X POST "$BASE_URL/fill_form" \
+      -H 'Content-Type: application/json' \
+      -d "{\"fields\":$1}"
+    echo
+    ;;
+
+  network)
+    curl -s "$BASE_URL/network"
+    echo
+    ;;
+
+  notes)
+    curl -s "$BASE_URL/notes"
+    echo
+    ;;
+
+  notes-get)
+    [[ $# -lt 1 ]] && { echo "Error: missing note ID"; exit 1; }
+    curl -s -X POST "$BASE_URL/notes/get" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg id "$1" '{id: $id}')"
+    echo
+    ;;
+
+  notes-create)
+    TITLE="${1:-}"
+    CONTENT="${2:-}"
+    curl -s -X POST "$BASE_URL/notes" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg title "$TITLE" --arg content "$CONTENT" '{title: $title, content: $content}')"
+    echo
+    ;;
+
+  notes-update)
+    [[ $# -lt 2 ]] && { echo "Error: missing note ID and/or content"; exit 1; }
+    curl -s -X POST "$BASE_URL/notes/update" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg id "$1" --arg content "$2" '{id: $id, content: $content}')"
+    echo
+    ;;
+
+  notes-delete)
+    [[ $# -lt 1 ]] && { echo "Error: missing note ID"; exit 1; }
+    curl -s -X POST "$BASE_URL/notes/delete" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg id "$1" '{id: $id}')"
+    echo
+    ;;
+
+  notes-image)
+    [[ $# -lt 1 ]] && { echo "Error: missing image ID"; exit 1; }
+    RESPONSE=$(curl -s -X POST "$BASE_URL/notes/image" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg imageId "$1" '{imageId: $imageId}')")
+    ERROR=$(echo "$RESPONSE" | jq -r '.error // empty')
+    if [[ -n "$ERROR" ]]; then
+      echo "Error: $ERROR"
+      exit 1
+    fi
+    TYPE=$(echo "$RESPONSE" | jq -r '.type // "image/png"')
+    EXT="png"
+    [[ "$TYPE" == "image/jpeg" ]] && EXT="jpg"
+    [[ "$TYPE" == "image/gif" ]] && EXT="gif"
+    [[ "$TYPE" == "image/webp" ]] && EXT="webp"
+    TMPFILE="$(mktemp /tmp/note-image-XXXXXX.$EXT)"
+    echo "$RESPONSE" | jq -r '.base64' | base64 -d > "$TMPFILE"
+    echo "Image saved to: $TMPFILE"
+    ;;
+
+  notes-search)
+    [[ $# -lt 1 ]] && { echo "Error: missing search query"; exit 1; }
+    curl -s -X POST "$BASE_URL/notes/search" \
+      -H 'Content-Type: application/json' \
+      -d "$(jq -n --arg query "$1" '{query: $query}')"
+    echo
+    ;;
+
+  *)
+    echo "Unknown command: $CMD"
+    usage
+    ;;
+esac
