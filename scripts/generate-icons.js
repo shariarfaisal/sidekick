@@ -1,133 +1,185 @@
 /**
  * Generate Sidekick extension icons as PNG files.
- * Modern rounded square with a clean bold "S".
+ * Browser window with side panel and pencil icon.
  */
 import { writeFileSync } from 'fs';
 
 function createPNG(size) {
   const pixels = new Uint8Array(size * size * 4);
 
-  const pad = 0.06;
-  const radius = 0.22;
+  // Colors
+  const frame = { r: 88, g: 101, b: 116 };
+  const frameDark = { r: 72, g: 84, b: 98 };
+  const white = { r: 255, g: 255, b: 255 };
+  const titleBar = { r: 235, g: 238, b: 242 };
+  const dot = { r: 180, g: 188, b: 198 };
+  const blue = { r: 56, g: 139, b: 253 };
+  const blueDark = { r: 40, g: 110, b: 220 };
 
-  const c1 = { r: 79, g: 70, b: 229 };
-  const c2 = { r: 56, g: 139, b: 253 };
+  function setPixel(x, y, c) {
+    if (x < 0 || x >= size || y < 0 || y >= size) return;
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    const i = (iy * size + ix) * 4;
+    pixels[i] = c.r; pixels[i+1] = c.g; pixels[i+2] = c.b; pixels[i+3] = 255;
+  }
 
-  function lerp(a, b, t) { return a + (b - a) * t; }
+  function fillRect(x0, y0, w, h, c) {
+    for (let y = Math.floor(y0); y < Math.floor(y0 + h) && y < size; y++) {
+      for (let x = Math.floor(x0); x < Math.floor(x0 + w) && x < size; x++) {
+        if (x >= 0 && y >= 0) setPixel(x, y, c);
+      }
+    }
+  }
 
-  function inRoundedRect(nx, ny) {
-    const x0 = pad, y0 = pad, x1 = 1 - pad, y1 = 1 - pad;
-    if (nx < x0 || nx > x1 || ny < y0 || ny > y1) return false;
-    const cr = radius;
-    if (nx < x0 + cr && ny < y0 + cr) {
-      return (nx - x0 - cr) ** 2 + (ny - y0 - cr) ** 2 <= cr * cr;
-    }
-    if (nx > x1 - cr && ny < y0 + cr) {
-      return (nx - x1 + cr) ** 2 + (ny - y0 - cr) ** 2 <= cr * cr;
-    }
-    if (nx < x0 + cr && ny > y1 - cr) {
-      return (nx - x0 - cr) ** 2 + (ny - y1 + cr) ** 2 <= cr * cr;
-    }
-    if (nx > x1 - cr && ny > y1 - cr) {
-      return (nx - x1 + cr) ** 2 + (ny - y1 + cr) ** 2 <= cr * cr;
-    }
+  function inRoundedRect(px, py, x0, y0, w, h, r) {
+    if (px < x0 || px >= x0 + w || py < y0 || py >= y0 + h) return false;
+    if (px < x0 + r && py < y0 + r) return (px - x0 - r) ** 2 + (py - y0 - r) ** 2 <= r * r;
+    if (px > x0 + w - r && py < y0 + r) return (px - x0 - w + r) ** 2 + (py - y0 - r) ** 2 <= r * r;
+    if (px < x0 + r && py > y0 + h - r) return (px - x0 - r) ** 2 + (py - y0 - h + r) ** 2 <= r * r;
+    if (px > x0 + w - r && py > y0 + h - r) return (px - x0 - w + r) ** 2 + (py - y0 - h + r) ** 2 <= r * r;
     return true;
   }
 
-  // Sample a cubic bezier at parameter t
-  function bezierPoint(p0, p1, p2, p3, t) {
-    const u = 1 - t;
-    return {
-      x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
-      y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
-    };
-  }
-
-  // Approximate minimum distance from point to cubic bezier
-  function distToBezier(px, py, p0, p1, p2, p3, samples) {
-    let minDist = Infinity;
-    for (let i = 0; i <= samples; i++) {
-      const t = i / samples;
-      const pt = bezierPoint(p0, p1, p2, p3, t);
-      const d = Math.hypot(px - pt.x, py - pt.y);
-      if (d < minDist) minDist = d;
+  function fillRoundedRect(x0, y0, w, h, r, c) {
+    for (let y = Math.floor(y0); y < Math.ceil(y0 + h) && y < size; y++) {
+      for (let x = Math.floor(x0); x < Math.ceil(x0 + w) && x < size; x++) {
+        if (x >= 0 && y >= 0 && inRoundedRect(x, y, x0, y0, w, h, r)) {
+          setPixel(x, y, c);
+        }
+      }
     }
-    return minDist;
   }
 
-  // Define the S as two bezier curves
-  // Top half of S: starts at right, curves up-left, ends at center-right going left
-  const s1 = [
-    { x: 0.63, y: 0.30 },  // start: top right
-    { x: 0.63, y: 0.18 },  // control: pulls up
-    { x: 0.30, y: 0.18 },  // control: pulls left
-    { x: 0.30, y: 0.35 },  // end: center left
-  ];
+  function fillCircle(cx, cy, r, c) {
+    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) {
+      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+        if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) {
+          setPixel(x, y, c);
+        }
+      }
+    }
+  }
 
-  // Middle connector
-  const s2 = [
-    { x: 0.30, y: 0.35 },  // start
-    { x: 0.30, y: 0.46 },  // control
-    { x: 0.70, y: 0.54 },  // control
-    { x: 0.70, y: 0.65 },  // end
-  ];
+  function fillRotatedRect(cx, cy, w, h, angle, c) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const maxR = Math.max(w, h);
+    for (let dy = -maxR; dy <= maxR; dy++) {
+      for (let dx = -maxR; dx <= maxR; dx++) {
+        const lx = dx * cos + dy * sin;
+        const ly = -dx * sin + dy * cos;
+        if (lx >= -w/2 && lx <= w/2 && ly >= -h/2 && ly <= h/2) {
+          setPixel(Math.round(cx + dx), Math.round(cy + dy), c);
+        }
+      }
+    }
+  }
 
-  // Bottom half of S: from center-left going right, curves down-right
-  const s3 = [
-    { x: 0.70, y: 0.65 },  // start: center right
-    { x: 0.70, y: 0.82 },  // control: pulls down
-    { x: 0.37, y: 0.82 },  // control: pulls right
-    { x: 0.37, y: 0.70 },  // end: bottom left
-  ];
+  const s = size;
+  const pad = s * 0.08;
+  const outerR = s * 0.18;
 
-  const strokeWidth = 0.075;
-  const sampleCount = 60;
+  // Outer frame
+  const fx = pad, fy = pad, fw = s - 2*pad, fh = s - 2*pad;
+  fillRoundedRect(fx, fy, fw, fh, outerR, frame);
 
-  // Pre-compute S distances for each pixel
+  // Inner browser window
+  const border = s * 0.06;
+  const ix = fx + border, iy = fy + border;
+  const iw = fw - 2*border, ih = fh - 2*border;
+  const innerR = Math.max(1, outerR - border);
+  fillRoundedRect(ix, iy, iw, ih, innerR, white);
+
+  // Title bar
+  const tbH = s * 0.10;
+  fillRect(ix, iy, iw, tbH, titleBar);
+  for (let y = Math.floor(iy); y < Math.floor(iy + innerR) && y < size; y++) {
+    for (let x = Math.floor(ix); x < Math.ceil(ix + iw) && x < size; x++) {
+      if (!inRoundedRect(x, y, ix, iy, iw, ih, innerR)) {
+        if (inRoundedRect(x, y, fx, fy, fw, fh, outerR)) {
+          setPixel(x, y, frame);
+        }
+      }
+    }
+  }
+
+  // Three dots
+  const dotR = Math.max(1, s * 0.018);
+  const dotY = iy + tbH * 0.5;
+  const dotStartX = ix + s * 0.06;
+  const dotGap = s * 0.045;
+  for (let d = 0; d < 3; d++) {
+    fillCircle(dotStartX + d * dotGap, dotY, dotR, dot);
+  }
+
+  // Side panel (blue)
+  const spW = s * 0.12;
+  const spX = ix + iw - spW;
+  const spY = iy + tbH;
+  const spH = ih - tbH;
+  fillRect(spX, spY, spW, spH, blue);
+
+  // Side panel inner line
+  const lineW = Math.max(1, s * 0.015);
+  const lineX = spX + spW * 0.35;
+  const linePad = s * 0.04;
+  fillRoundedRect(lineX, spY + linePad, lineW, spH - 2*linePad, lineW/2, { r: 100, g: 175, b: 255 });
+
+  // Clean bottom-right corner
+  for (let y = Math.floor(iy + ih - innerR); y < Math.ceil(iy + ih); y++) {
+    for (let x = Math.floor(spX); x < Math.ceil(ix + iw); x++) {
+      if (!inRoundedRect(x, y, ix, iy, iw, ih, innerR)) {
+        if (inRoundedRect(x, y, fx, fy, fw, fh, outerR)) {
+          setPixel(x, y, frame);
+        }
+      }
+    }
+  }
+
+  // Side panel left border
+  fillRect(spX, spY, Math.max(1, s * 0.01), spH, blueDark);
+
+  // Pencil icon
+  const contentW = iw - spW;
+  const contentCx = ix + contentW * 0.5;
+  const contentCy = iy + tbH + (ih - tbH) * 0.5;
+  const pencilLen = s * 0.22;
+  const pencilW = s * 0.05;
+  const angle = -Math.PI / 4;
+
+  fillRotatedRect(contentCx, contentCy, pencilW, pencilLen, angle, blue);
+
+  // Pencil tip
+  const tipDist = pencilLen / 2 + s * 0.03;
+  const tipX = contentCx + Math.sin(angle) * tipDist;
+  const tipY = contentCy + Math.cos(angle) * tipDist;
+  const tipR = s * 0.025;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  for (let dy = -tipR * 2; dy <= tipR * 2; dy++) {
+    for (let dx = -tipR * 2; dx <= tipR * 2; dx++) {
+      const lx = dx * cos + dy * sin;
+      const ly = -dx * sin + dy * cos;
+      if (ly >= 0 && ly <= tipR * 2 && Math.abs(lx) <= pencilW/2 * (1 - ly / (tipR * 2))) {
+        setPixel(Math.round(tipX + dx), Math.round(tipY + dy), blueDark);
+      }
+    }
+  }
+
+  // Pencil cap
+  const capDist = pencilLen / 2 + s * 0.015;
+  const capX = contentCx - Math.sin(angle) * capDist;
+  const capY = contentCy - Math.cos(angle) * capDist;
+  fillRotatedRect(capX, capY, pencilW * 1.1, s * 0.03, angle, frameDark);
+
+  // Transparent outside
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const i = (y * size + x) * 4;
-      const nx = (x + 0.5) / size;
-      const ny = (y + 0.5) / size;
-
-      if (!inRoundedRect(nx, ny)) {
-        pixels[i] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = 0;
-        continue;
+      if (!inRoundedRect(x, y, fx, fy, fw, fh, outerR)) {
+        const i = (y * size + x) * 4;
+        pixels[i] = 0; pixels[i+1] = 0; pixels[i+2] = 0; pixels[i+3] = 0;
       }
-
-      // Gradient
-      const t = Math.min(1, Math.max(0, (nx + ny - 0.12) / 1.76));
-      let r = lerp(c1.r, c2.r, t);
-      let g = lerp(c1.g, c2.g, t);
-      let b = lerp(c1.b, c2.b, t);
-
-      // Top highlight
-      const normY = (ny - pad) / (1 - 2 * pad);
-      if (normY < 0.2) {
-        const hl = (0.2 - normY) / 0.2 * 0.08;
-        r = Math.min(255, r + hl * 255);
-        g = Math.min(255, g + hl * 255);
-        b = Math.min(255, b + hl * 255);
-      }
-
-      // Distance to S
-      const d1 = distToBezier(nx, ny, s1[0], s1[1], s1[2], s1[3], sampleCount);
-      const d2 = distToBezier(nx, ny, s2[0], s2[1], s2[2], s2[3], sampleCount);
-      const d3 = distToBezier(nx, ny, s3[0], s3[1], s3[2], s3[3], sampleCount);
-      const sDist = Math.min(d1, d2, d3);
-
-      if (sDist < strokeWidth) {
-        const edge = strokeWidth - sDist;
-        const aa = Math.min(1, edge * size * 0.7);
-        r = lerp(r, 255, aa);
-        g = lerp(g, 255, aa);
-        b = lerp(b, 255, aa);
-      }
-
-      pixels[i] = Math.round(r);
-      pixels[i + 1] = Math.round(g);
-      pixels[i + 2] = Math.round(b);
-      pixels[i + 3] = 255;
     }
   }
 
@@ -135,14 +187,6 @@ function createPNG(size) {
 }
 
 function encodePNG(width, height, pixels) {
-  function crc32(buf) {
-    let crc = -1;
-    for (let i = 0; i < buf.length; i++) {
-      crc = (crc >>> 8) ^ crcTable[(crc ^ buf[i]) & 0xff];
-    }
-    return (crc ^ -1) >>> 0;
-  }
-
   const crcTable = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {
     let c = n;
@@ -150,12 +194,15 @@ function encodePNG(width, height, pixels) {
     crcTable[n] = c;
   }
 
+  function crc32(buf) {
+    let crc = -1;
+    for (let i = 0; i < buf.length; i++) crc = (crc >>> 8) ^ crcTable[(crc ^ buf[i]) & 0xff];
+    return (crc ^ -1) >>> 0;
+  }
+
   function adler32(buf) {
     let a = 1, b = 0;
-    for (let i = 0; i < buf.length; i++) {
-      a = (a + buf[i]) % 65521;
-      b = (b + a) % 65521;
-    }
+    for (let i = 0; i < buf.length; i++) { a = (a + buf[i]) % 65521; b = (b + a) % 65521; }
     return ((b << 16) | a) >>> 0;
   }
 
@@ -166,79 +213,50 @@ function encodePNG(width, height, pixels) {
   }
 
   const blocks = [];
-  const BLOCK_SIZE = 65535;
-  for (let i = 0; i < rawData.length; i += BLOCK_SIZE) {
-    const end = Math.min(i + BLOCK_SIZE, rawData.length);
-    const isLast = end === rawData.length;
+  for (let i = 0; i < rawData.length; i += 65535) {
+    const end = Math.min(i + 65535, rawData.length);
     const block = rawData.slice(i, end);
     const header = new Uint8Array(5);
-    header[0] = isLast ? 1 : 0;
-    header[1] = block.length & 0xff;
-    header[2] = (block.length >> 8) & 0xff;
-    header[3] = ~block.length & 0xff;
-    header[4] = (~block.length >> 8) & 0xff;
+    header[0] = end === rawData.length ? 1 : 0;
+    header[1] = block.length & 0xff; header[2] = (block.length >> 8) & 0xff;
+    header[3] = ~block.length & 0xff; header[4] = (~block.length >> 8) & 0xff;
     blocks.push(header, block);
   }
 
   const adler = adler32(rawData);
   const deflated = new Uint8Array(2 + blocks.reduce((s, b) => s + b.length, 0) + 4);
-  deflated[0] = 0x78;
-  deflated[1] = 0x01;
+  deflated[0] = 0x78; deflated[1] = 0x01;
   let offset = 2;
-  for (const b of blocks) {
-    deflated.set(b, offset);
-    offset += b.length;
-  }
-  deflated[offset] = (adler >> 24) & 0xff;
-  deflated[offset + 1] = (adler >> 16) & 0xff;
-  deflated[offset + 2] = (adler >> 8) & 0xff;
-  deflated[offset + 3] = adler & 0xff;
+  for (const b of blocks) { deflated.set(b, offset); offset += b.length; }
+  deflated[offset] = (adler >> 24) & 0xff; deflated[offset+1] = (adler >> 16) & 0xff;
+  deflated[offset+2] = (adler >> 8) & 0xff; deflated[offset+3] = adler & 0xff;
 
   function makeChunk(type, data) {
     const chunk = new Uint8Array(4 + type.length + data.length + 4);
-    const len = data.length;
-    chunk[0] = (len >> 24) & 0xff;
-    chunk[1] = (len >> 16) & 0xff;
-    chunk[2] = (len >> 8) & 0xff;
-    chunk[3] = len & 0xff;
+    chunk[0] = (data.length >> 24) & 0xff; chunk[1] = (data.length >> 16) & 0xff;
+    chunk[2] = (data.length >> 8) & 0xff; chunk[3] = data.length & 0xff;
     for (let i = 0; i < type.length; i++) chunk[4 + i] = type.charCodeAt(i);
     chunk.set(data, 4 + type.length);
     const crc = crc32(chunk.slice(4, 4 + type.length + data.length));
-    const end = 4 + type.length + data.length;
-    chunk[end] = (crc >> 24) & 0xff;
-    chunk[end + 1] = (crc >> 16) & 0xff;
-    chunk[end + 2] = (crc >> 8) & 0xff;
-    chunk[end + 3] = crc & 0xff;
+    const e = 4 + type.length + data.length;
+    chunk[e] = (crc >> 24) & 0xff; chunk[e+1] = (crc >> 16) & 0xff;
+    chunk[e+2] = (crc >> 8) & 0xff; chunk[e+3] = crc & 0xff;
     return chunk;
   }
 
-  const ihdr = new Uint8Array(13);
-  ihdr[0] = (width >> 24) & 0xff;
-  ihdr[1] = (width >> 16) & 0xff;
-  ihdr[2] = (width >> 8) & 0xff;
-  ihdr[3] = width & 0xff;
-  ihdr[4] = (height >> 24) & 0xff;
-  ihdr[5] = (height >> 16) & 0xff;
-  ihdr[6] = (height >> 8) & 0xff;
-  ihdr[7] = height & 0xff;
-  ihdr[8] = 8;
-  ihdr[9] = 6;
-  ihdr[10] = 0;
-  ihdr[11] = 0;
-  ihdr[12] = 0;
+  const hdr = new Uint8Array(13);
+  hdr[0] = (width >> 24) & 0xff; hdr[1] = (width >> 16) & 0xff;
+  hdr[2] = (width >> 8) & 0xff; hdr[3] = width & 0xff;
+  hdr[4] = (height >> 24) & 0xff; hdr[5] = (height >> 16) & 0xff;
+  hdr[6] = (height >> 8) & 0xff; hdr[7] = height & 0xff;
+  hdr[8] = 8; hdr[9] = 6; hdr[10] = 0; hdr[11] = 0; hdr[12] = 0;
 
-  const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
-  const ihdrChunk = makeChunk('IHDR', ihdr);
-  const idatChunk = makeChunk('IDAT', deflated);
-  const iendChunk = makeChunk('IEND', new Uint8Array(0));
-
-  const png = new Uint8Array(signature.length + ihdrChunk.length + idatChunk.length + iendChunk.length);
+  const sig = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+  const chunks = [sig, makeChunk('IHDR', hdr), makeChunk('IDAT', deflated), makeChunk('IEND', new Uint8Array(0))];
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const png = new Uint8Array(total);
   let pos = 0;
-  png.set(signature, pos); pos += signature.length;
-  png.set(ihdrChunk, pos); pos += ihdrChunk.length;
-  png.set(idatChunk, pos); pos += idatChunk.length;
-  png.set(iendChunk, pos);
-
+  for (const c of chunks) { png.set(c, pos); pos += c.length; }
   return Buffer.from(png);
 }
 
