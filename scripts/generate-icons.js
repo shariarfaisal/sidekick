@@ -1,103 +1,139 @@
 /**
- * Generate extension icons as PNG files using pure JS (no dependencies).
- * Creates minimal notepad icons at 16, 48, 128px sizes.
+ * Generate Sidekick extension icons as PNG files.
+ * Modern rounded square with a clean bold "S".
  */
 import { writeFileSync } from 'fs';
 
-// Since we can't use canvas in Node without native deps,
-// we'll generate simple PNG files manually using a minimal PNG encoder.
-
 function createPNG(size) {
-  // Create raw RGBA pixel data
   const pixels = new Uint8Array(size * size * 4);
-  const pad = Math.max(1, Math.floor(size * 0.12));
-  const cornerR = Math.max(1, Math.floor(size * 0.15));
 
+  const pad = 0.06;
+  const radius = 0.22;
+
+  const c1 = { r: 79, g: 70, b: 229 };
+  const c2 = { r: 56, g: 139, b: 253 };
+
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  function inRoundedRect(nx, ny) {
+    const x0 = pad, y0 = pad, x1 = 1 - pad, y1 = 1 - pad;
+    if (nx < x0 || nx > x1 || ny < y0 || ny > y1) return false;
+    const cr = radius;
+    if (nx < x0 + cr && ny < y0 + cr) {
+      return (nx - x0 - cr) ** 2 + (ny - y0 - cr) ** 2 <= cr * cr;
+    }
+    if (nx > x1 - cr && ny < y0 + cr) {
+      return (nx - x1 + cr) ** 2 + (ny - y0 - cr) ** 2 <= cr * cr;
+    }
+    if (nx < x0 + cr && ny > y1 - cr) {
+      return (nx - x0 - cr) ** 2 + (ny - y1 + cr) ** 2 <= cr * cr;
+    }
+    if (nx > x1 - cr && ny > y1 - cr) {
+      return (nx - x1 + cr) ** 2 + (ny - y1 + cr) ** 2 <= cr * cr;
+    }
+    return true;
+  }
+
+  // Sample a cubic bezier at parameter t
+  function bezierPoint(p0, p1, p2, p3, t) {
+    const u = 1 - t;
+    return {
+      x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+      y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+    };
+  }
+
+  // Approximate minimum distance from point to cubic bezier
+  function distToBezier(px, py, p0, p1, p2, p3, samples) {
+    let minDist = Infinity;
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const pt = bezierPoint(p0, p1, p2, p3, t);
+      const d = Math.hypot(px - pt.x, py - pt.y);
+      if (d < minDist) minDist = d;
+    }
+    return minDist;
+  }
+
+  // Define the S as two bezier curves
+  // Top half of S: starts at right, curves up-left, ends at center-right going left
+  const s1 = [
+    { x: 0.63, y: 0.30 },  // start: top right
+    { x: 0.63, y: 0.18 },  // control: pulls up
+    { x: 0.30, y: 0.18 },  // control: pulls left
+    { x: 0.30, y: 0.35 },  // end: center left
+  ];
+
+  // Middle connector
+  const s2 = [
+    { x: 0.30, y: 0.35 },  // start
+    { x: 0.30, y: 0.46 },  // control
+    { x: 0.70, y: 0.54 },  // control
+    { x: 0.70, y: 0.65 },  // end
+  ];
+
+  // Bottom half of S: from center-left going right, curves down-right
+  const s3 = [
+    { x: 0.70, y: 0.65 },  // start: center right
+    { x: 0.70, y: 0.82 },  // control: pulls down
+    { x: 0.37, y: 0.82 },  // control: pulls right
+    { x: 0.37, y: 0.70 },  // end: bottom left
+  ];
+
+  const strokeWidth = 0.075;
+  const sampleCount = 60;
+
+  // Pre-compute S distances for each pixel
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const i = (y * size + x) * 4;
+      const nx = (x + 0.5) / size;
+      const ny = (y + 0.5) / size;
 
-      // Check if pixel is inside rounded rectangle
-      const inRect = x >= pad && x < size - pad && y >= pad && y < size - pad;
-
-      // Simple rounded corners check
-      const corners = [
-        [pad + cornerR, pad + cornerR],
-        [size - pad - cornerR, pad + cornerR],
-        [pad + cornerR, size - pad - cornerR],
-        [size - pad - cornerR, size - pad - cornerR],
-      ];
-
-      let inShape = inRect;
-      if (inRect) {
-        for (const [cx, cy] of corners) {
-          const dx = Math.abs(x - cx);
-          const dy = Math.abs(y - cy);
-          if (
-            ((x < pad + cornerR && y < pad + cornerR) ||
-              (x >= size - pad - cornerR && y < pad + cornerR) ||
-              (x < pad + cornerR && y >= size - pad - cornerR) ||
-              (x >= size - pad - cornerR && y >= size - pad - cornerR)) &&
-            dx * dx + dy * dy > cornerR * cornerR
-          ) {
-            inShape = false;
-          }
-        }
+      if (!inRoundedRect(nx, ny)) {
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = pixels[i + 3] = 0;
+        continue;
       }
 
-      // Draw lines inside the notepad
-      const lineSpacing = Math.max(2, Math.floor(size * 0.18));
-      const lineStart = pad + Math.floor(size * 0.25);
-      const lineEnd = size - pad - Math.floor(size * 0.15);
-      const lineY1 = pad + Math.floor(size * 0.35);
-      const isLine =
-        inShape &&
-        x >= lineStart &&
-        x <= lineEnd &&
-        y >= lineY1 &&
-        (y - lineY1) % lineSpacing < Math.max(1, Math.floor(size * 0.04));
+      // Gradient
+      const t = Math.min(1, Math.max(0, (nx + ny - 0.12) / 1.76));
+      let r = lerp(c1.r, c2.r, t);
+      let g = lerp(c1.g, c2.g, t);
+      let b = lerp(c1.b, c2.b, t);
 
-      // Fold corner
-      const foldSize = Math.floor(size * 0.2);
-      const isFold =
-        x >= size - pad - foldSize &&
-        y <= pad + foldSize &&
-        x - (size - pad - foldSize) + (y - pad) <= foldSize;
-
-      if (inShape) {
-        if (isFold) {
-          // Fold area - slightly darker
-          pixels[i] = 200;
-          pixels[i + 1] = 200;
-          pixels[i + 2] = 200;
-          pixels[i + 3] = 255;
-        } else if (isLine) {
-          // Text lines
-          pixels[i] = 80;
-          pixels[i + 1] = 80;
-          pixels[i + 2] = 80;
-          pixels[i + 3] = 255;
-        } else {
-          // White paper
-          pixels[i] = 250;
-          pixels[i + 1] = 250;
-          pixels[i + 2] = 250;
-          pixels[i + 3] = 255;
-        }
-      } else {
-        // Transparent
-        pixels[i] = 0;
-        pixels[i + 1] = 0;
-        pixels[i + 2] = 0;
-        pixels[i + 3] = 0;
+      // Top highlight
+      const normY = (ny - pad) / (1 - 2 * pad);
+      if (normY < 0.2) {
+        const hl = (0.2 - normY) / 0.2 * 0.08;
+        r = Math.min(255, r + hl * 255);
+        g = Math.min(255, g + hl * 255);
+        b = Math.min(255, b + hl * 255);
       }
+
+      // Distance to S
+      const d1 = distToBezier(nx, ny, s1[0], s1[1], s1[2], s1[3], sampleCount);
+      const d2 = distToBezier(nx, ny, s2[0], s2[1], s2[2], s2[3], sampleCount);
+      const d3 = distToBezier(nx, ny, s3[0], s3[1], s3[2], s3[3], sampleCount);
+      const sDist = Math.min(d1, d2, d3);
+
+      if (sDist < strokeWidth) {
+        const edge = strokeWidth - sDist;
+        const aa = Math.min(1, edge * size * 0.7);
+        r = lerp(r, 255, aa);
+        g = lerp(g, 255, aa);
+        b = lerp(b, 255, aa);
+      }
+
+      pixels[i] = Math.round(r);
+      pixels[i + 1] = Math.round(g);
+      pixels[i + 2] = Math.round(b);
+      pixels[i + 3] = 255;
     }
   }
 
   return encodePNG(size, size, pixels);
 }
 
-// Minimal PNG encoder
 function encodePNG(width, height, pixels) {
   function crc32(buf) {
     let crc = -1;
@@ -115,8 +151,7 @@ function encodePNG(width, height, pixels) {
   }
 
   function adler32(buf) {
-    let a = 1,
-      b = 0;
+    let a = 1, b = 0;
     for (let i = 0; i < buf.length; i++) {
       a = (a + buf[i]) % 65521;
       b = (b + a) % 65521;
@@ -124,14 +159,12 @@ function encodePNG(width, height, pixels) {
     return ((b << 16) | a) >>> 0;
   }
 
-  // Create raw scanlines (filter byte 0 = none, then RGBA pixels)
   const rawData = new Uint8Array(height * (1 + width * 4));
   for (let y = 0; y < height; y++) {
-    rawData[y * (1 + width * 4)] = 0; // filter none
+    rawData[y * (1 + width * 4)] = 0;
     rawData.set(pixels.slice(y * width * 4, (y + 1) * width * 4), y * (1 + width * 4) + 1);
   }
 
-  // Deflate (store only - no compression, using zlib format)
   const blocks = [];
   const BLOCK_SIZE = 65535;
   for (let i = 0; i < rawData.length; i += BLOCK_SIZE) {
@@ -148,9 +181,7 @@ function encodePNG(width, height, pixels) {
   }
 
   const adler = adler32(rawData);
-  const deflated = new Uint8Array(
-    2 + blocks.reduce((s, b) => s + b.length, 0) + 4
-  );
+  const deflated = new Uint8Array(2 + blocks.reduce((s, b) => s + b.length, 0) + 4);
   deflated[0] = 0x78;
   deflated[1] = 0x01;
   let offset = 2;
@@ -163,7 +194,6 @@ function encodePNG(width, height, pixels) {
   deflated[offset + 2] = (adler >> 8) & 0xff;
   deflated[offset + 3] = adler & 0xff;
 
-  // Build PNG chunks
   function makeChunk(type, data) {
     const chunk = new Uint8Array(4 + type.length + data.length + 4);
     const len = data.length;
@@ -182,7 +212,6 @@ function encodePNG(width, height, pixels) {
     return chunk;
   }
 
-  // IHDR
   const ihdr = new Uint8Array(13);
   ihdr[0] = (width >> 24) & 0xff;
   ihdr[1] = (width >> 16) & 0xff;
@@ -192,20 +221,18 @@ function encodePNG(width, height, pixels) {
   ihdr[5] = (height >> 16) & 0xff;
   ihdr[6] = (height >> 8) & 0xff;
   ihdr[7] = height & 0xff;
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // RGBA
-  ihdr[10] = 0; // compression
-  ihdr[11] = 0; // filter
-  ihdr[12] = 0; // interlace
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
 
   const signature = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
   const ihdrChunk = makeChunk('IHDR', ihdr);
   const idatChunk = makeChunk('IDAT', deflated);
   const iendChunk = makeChunk('IEND', new Uint8Array(0));
 
-  const png = new Uint8Array(
-    signature.length + ihdrChunk.length + idatChunk.length + iendChunk.length
-  );
+  const png = new Uint8Array(signature.length + ihdrChunk.length + idatChunk.length + iendChunk.length);
   let pos = 0;
   png.set(signature, pos); pos += signature.length;
   png.set(ihdrChunk, pos); pos += ihdrChunk.length;
@@ -215,7 +242,6 @@ function encodePNG(width, height, pixels) {
   return Buffer.from(png);
 }
 
-// Generate icons
 const sizes = [16, 48, 128];
 for (const size of sizes) {
   const png = createPNG(size);
