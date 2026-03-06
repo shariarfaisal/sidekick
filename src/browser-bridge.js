@@ -3,7 +3,7 @@
 
 import { getImage } from './imageStore.js';
 
-const NOTES_KEY = 'sidekicks';
+const NOTES_KEY = 'sidekick_notes';
 const ACTIVE_NOTE_KEY = 'sidebar_active_note';
 
 let consoleLogs = [];

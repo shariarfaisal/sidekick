@@ -1,7 +1,7 @@
 import { wasLocalWrite } from './storage.js';
 
 const SYNCED_KEYS = {
-  sidekicks: 'onNotesChanged',
+  sidekick_notes: 'onNotesChanged',
   sidekick_theme: 'onThemeChanged',
   sidebar_ai_model: 'onModelChanged',
 };

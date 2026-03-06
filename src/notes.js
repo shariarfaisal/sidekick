@@ -1,6 +1,6 @@
 import { storage } from './storage.js';
 
-const NOTES_KEY = 'sidekicks';
+const NOTES_KEY = 'sidekick_notes';
 const ACTIVE_KEY = 'sidebar_active_note';
 
 function generateId() {

@@ -1,6 +1,6 @@
 # Sidekick
 
-A Chrome extension that provides a minimal markdown note-taking editor, AI writing assistant, and a built-in terminal in the browser's side panel.
+A Chrome extension that puts your terminal, notes, and AI assistant all inside the browser's side panel.
 
 ## Features
 
@@ -9,6 +9,7 @@ A Chrome extension that provides a minimal markdown note-taking editor, AI writi
 - **AI Writing Assistant** — Inline AI actions (rewrite, summarize, expand, fix grammar) on selected text, plus a chat panel for asking questions about your notes. Powered by GitHub Models with 10 model choices including GPT-5, GPT-4.1, o4-mini, DeepSeek R1, and Llama 3.1 405B
 - **Built-in Terminal** — Integrated xterm.js terminal with multiple tabs, connected to a local shell via WebSocket + node-pty
 - **Dark / Light Themes** — Toggle between themes; terminal colors update to match
+- **MCP Server** — Let AI agents like Claude and GitHub Copilot control your browser and manage notes programmatically
 
 ## Tech Stack
 
@@ -28,13 +29,26 @@ A Chrome extension that provides a minimal markdown note-taking editor, AI writi
 
 ### One-Command Setup
 
+**macOS / Linux:**
+
 ```bash
-git clone <repo-url> && cd sidekick
+git clone https://github.com/shariarfaisal/sidekick.git && cd sidekick
 gh auth login          # authenticate for AI features (one-time)
 ./setup.sh             # installs deps, builds, starts background server
 ```
 
-That's it. The setup script:
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/shariarfaisal/sidekick.git; cd sidekick
+gh auth login
+.\setup.ps1
+```
+
+> **Windows prerequisite:** node-pty requires C++ build tools. Install them with:
+> `npm install --global windows-build-tools` (from an admin PowerShell), or install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload.
+
+The setup script:
 1. Installs all npm dependencies
 2. Builds the extension to `dist/`
 3. Registers a background service that starts the server automatically on login
@@ -49,8 +63,14 @@ The server runs at `http://localhost:8768` in the background — no need to star
 
 ### Uninstall
 
+**macOS / Linux:**
 ```bash
-./uninstall.sh         # stops and removes the background service
+./uninstall.sh
+```
+
+**Windows (PowerShell):**
+```powershell
+.\uninstall.ps1
 ```
 
 ## AI Features
@@ -60,8 +80,11 @@ The AI proxy uses your local `gh auth token` at runtime — no API keys are stor
 - **Inline actions:** Select text in a note → format toolbar shows AI buttons (Rewrite, Summarize, Expand, Fix Grammar)
 - **Chat panel:** Click the sparkle icon in the topbar → ask questions about your note
 - **Model selection:** Choose from 10 models in the chat panel dropdown
+- **Image input:** Attach or paste images into the chat
+- **@-mentions:** Reference other notes in chat with `@NoteName`
+- **Export:** Export chat conversations as markdown
 
-Supported platforms: **macOS** (launchd) and **Linux** (systemd).
+Supported platforms: **macOS** (launchd), **Linux** (systemd), and **Windows** (Task Scheduler).
 
 ## MCP Setup (AI Agent Integration)
 
@@ -159,23 +182,28 @@ cd terminal-server && npm start
 
 ```
 src/
-├── main.js          # App initialization & view switching
-├── editor.js        # TipTap editor setup
-├── ai.js            # AI client (SSE streaming, inline actions, chat)
-├── chat.js          # Multi-terminal management & WebSocket
-├── notes.js         # Note CRUD & utilities
-├── ui.js            # UI event handlers & rendering
-├── storage.js       # Chrome storage wrapper
-├── theme.js         # Theme management
-├── sidepanel.html   # Main HTML
-└── styles/          # CSS (main, editor, chat, themes)
+├── main.js            # App initialization & view switching
+├── editor.js          # TipTap editor setup
+├── ai.js              # AI client (SSE streaming, inline actions, chat)
+├── chat.js            # Multi-terminal management & WebSocket
+├── notes.js           # Note CRUD & utilities
+├── ui.js              # UI event handlers & rendering
+├── storage.js         # Chrome storage wrapper
+├── sync.js            # Cross-tab sync via storage change events
+├── browser-bridge.js  # Browser control bridge (extension ↔ server)
+├── imageStore.js      # IndexedDB image storage
+├── export.js          # Markdown export
+├── theme.js           # Theme management
+├── sidepanel.html     # Main HTML
+└── styles/            # CSS (main, editor, chat, themes)
 terminal-server/
-└── server.js        # HTTP + WebSocket server (terminal + AI proxy)
-setup.sh             # One-command install & background service setup
-uninstall.sh         # Remove background service
+├── server.js          # HTTP + WebSocket server (terminal + AI proxy)
+└── mcp-server.js      # MCP server for AI agent integration
+setup.sh               # One-command install & background service setup
+uninstall.sh           # Remove background service
 public/
-├── manifest.json    # Chrome extension manifest
-└── icons/           # Extension icons
+├── manifest.json      # Chrome extension manifest
+└── icons/             # Extension icons
 ```
 
 ## License
