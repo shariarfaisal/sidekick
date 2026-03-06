@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "Installing Sidebar Note terminal server..."
+echo "Installing Sidekick terminal server..."
 
 # Check for node
 if ! command -v node &> /dev/null; then
@@ -36,4 +36,4 @@ echo "To start the terminal server:"
 echo "  cd $SCRIPT_DIR && npm start"
 echo ""
 echo "The server runs on ws://localhost:8768"
-echo "Open the Sidebar Note extension and switch to the Terminal tab."
+echo "Open the Sidekick extension and switch to the Terminal tab."

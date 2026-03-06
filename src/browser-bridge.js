@@ -3,7 +3,7 @@
 
 import { getImage } from './imageStore.js';
 
-const NOTES_KEY = 'sidebar_notes';
+const NOTES_KEY = 'sidekicks';
 const ACTIVE_NOTE_KEY = 'sidebar_active_note';
 
 let consoleLogs = [];
@@ -140,8 +140,8 @@ async function handleAction(action, params) {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
           func: () => {
-            if (window.__sidebarNoteConsoleCapture) return;
-            window.__sidebarNoteConsoleCapture = true;
+            if (window.__sidekickConsoleCapture) return;
+            window.__sidekickConsoleCapture = true;
             window.__capturedConsoleLogs = window.__capturedConsoleLogs || [];
             const original = {};
             ['log', 'warn', 'error', 'info', 'debug'].forEach((method) => {
@@ -429,8 +429,8 @@ async function handleAction(action, params) {
       await chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: () => {
-          if (window.__sidebarNoteNetCapture) return;
-          window.__sidebarNoteNetCapture = true;
+          if (window.__sidekickNetCapture) return;
+          window.__sidekickNetCapture = true;
           window.__capturedNetRequests = window.__capturedNetRequests || [];
           const origFetch = window.fetch;
           window.fetch = async function (...args) {

@@ -1,7 +1,7 @@
 {
-  "name": "sidebar-note-terminal",
+  "name": "sidekick-terminal",
   "version": "1.0.0",
-  "description": "Local terminal server for Sidebar Note extension",
+  "description": "Local terminal server for Sidekick extension",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

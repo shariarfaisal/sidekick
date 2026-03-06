@@ -1,14 +1,14 @@
 #!/bin/bash
 
-SERVICE_NAME="com.sidebar-note.server"
+SERVICE_NAME="com.sidekick.server"
 
-echo "=== Sidebar Note Uninstall ==="
+echo "=== Sidekick Uninstall ==="
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
   launchctl bootout "gui/$(id -u)/$SERVICE_NAME" 2>/dev/null && echo "Service stopped." || echo "Service was not running."
   PLIST_FILE="$HOME/Library/LaunchAgents/$SERVICE_NAME.plist"
   rm -f "$PLIST_FILE" && echo "Launch Agent removed."
-  echo "Logs at ~/Library/Logs/sidebar-note/ (remove manually if desired)."
+  echo "Logs at ~/Library/Logs/sidekick/ (remove manually if desired)."
 
 elif [[ "$OSTYPE" == "linux"* ]]; then
   systemctl --user stop "$SERVICE_NAME" 2>/dev/null

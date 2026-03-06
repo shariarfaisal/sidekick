@@ -1,6 +1,6 @@
 import { storage } from './storage.js';
 
-const THEME_KEY = 'sidebar_note_theme';
+const THEME_KEY = 'sidekick_theme';
 
 export async function initTheme() {
   const saved = await storage.get(THEME_KEY);

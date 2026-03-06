@@ -1,5 +1,5 @@
 /* Tiptap Editor Styles */
-.sidebar-note-editor {
+.sidekick-editor {
   padding: 16px 20px;
   min-height: calc(100vh - 48px);
   outline: none;
@@ -21,7 +21,7 @@
 }
 
 /* Headings */
-.sidebar-note-editor h1 {
+.sidekick-editor h1 {
   font-size: 1.75em;
   font-weight: 700;
   margin: 1em 0 0.4em;
@@ -29,7 +29,7 @@
   letter-spacing: -0.02em;
 }
 
-.sidebar-note-editor h2 {
+.sidekick-editor h2 {
   font-size: 1.35em;
   font-weight: 650;
   margin: 0.9em 0 0.35em;
@@ -37,45 +37,45 @@
   letter-spacing: -0.01em;
 }
 
-.sidebar-note-editor h3 {
+.sidekick-editor h3 {
   font-size: 1.1em;
   font-weight: 600;
   margin: 0.8em 0 0.3em;
   line-height: 1.4;
 }
 
-.sidebar-note-editor h1:first-child,
-.sidebar-note-editor h2:first-child,
-.sidebar-note-editor h3:first-child {
+.sidekick-editor h1:first-child,
+.sidekick-editor h2:first-child,
+.sidekick-editor h3:first-child {
   margin-top: 0;
 }
 
 /* Paragraphs */
-.sidebar-note-editor p {
+.sidekick-editor p {
   margin: 0.5em 0;
 }
 
 /* Bold, Italic, etc */
-.sidebar-note-editor strong {
+.sidekick-editor strong {
   font-weight: 650;
 }
 
-.sidebar-note-editor em {
+.sidekick-editor em {
   font-style: italic;
 }
 
-.sidebar-note-editor u {
+.sidekick-editor u {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.sidebar-note-editor s {
+.sidekick-editor s {
   text-decoration: line-through;
   color: var(--text-secondary);
 }
 
 /* Links */
-.sidebar-note-editor a {
+.sidekick-editor a {
   color: var(--text-primary);
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -84,12 +84,12 @@
   transition: text-decoration-color 0.15s;
 }
 
-.sidebar-note-editor a:hover {
+.sidekick-editor a:hover {
   text-decoration-color: var(--text-primary);
 }
 
 /* Inline Code */
-.sidebar-note-editor code {
+.sidekick-editor code {
   font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
   font-size: 0.88em;
   background: var(--bg-code);
@@ -174,7 +174,7 @@
 }
 
 /* Code Block (fallback for pre without wrapper) */
-.sidebar-note-editor pre {
+.sidekick-editor pre {
   background: var(--bg-code);
   border-radius: var(--radius-md);
   padding: 14px 16px;
@@ -183,7 +183,7 @@
   border: 1px solid var(--border-primary);
 }
 
-.sidebar-note-editor pre code {
+.sidekick-editor pre code {
   background: none;
   padding: 0;
   font-size: 0.85em;
@@ -316,7 +316,7 @@
 }
 
 /* Blockquote */
-.sidebar-note-editor blockquote {
+.sidekick-editor blockquote {
   border-left: 3px solid var(--border-secondary);
   padding-left: 14px;
   margin: 0.75em 0;
@@ -324,38 +324,38 @@
 }
 
 /* Lists */
-.sidebar-note-editor ul,
-.sidebar-note-editor ol {
+.sidekick-editor ul,
+.sidekick-editor ol {
   padding-left: 24px;
   margin: 0.5em 0;
 }
 
-.sidebar-note-editor li {
+.sidekick-editor li {
   margin: 0.2em 0;
 }
 
-.sidebar-note-editor li p {
+.sidekick-editor li p {
   margin: 0;
 }
 
 /* Task List */
-.sidebar-note-editor ul[data-type="taskList"] {
+.sidekick-editor ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
 }
 
-.sidebar-note-editor ul[data-type="taskList"] li {
+.sidekick-editor ul[data-type="taskList"] li {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.sidebar-note-editor ul[data-type="taskList"] li > label {
+.sidekick-editor ul[data-type="taskList"] li > label {
   flex-shrink: 0;
   margin-top: 3px;
 }
 
-.sidebar-note-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
+.sidekick-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
   width: 16px;
@@ -368,12 +368,12 @@
   background: var(--bg-primary);
 }
 
-.sidebar-note-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+.sidekick-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
   background: var(--accent);
   border-color: var(--accent);
 }
 
-.sidebar-note-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
+.sidekick-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
   content: '';
   position: absolute;
   left: 4px;
@@ -385,7 +385,7 @@
   transform: rotate(45deg);
 }
 
-.sidebar-note-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+.sidekick-editor ul[data-type="taskList"] li[data-checked="true"] > div {
   text-decoration: line-through;
   color: var(--text-tertiary);
 }
@@ -521,7 +521,7 @@
 }
 
 /* Horizontal Rule */
-.sidebar-note-editor hr {
+.sidekick-editor hr {
   border: none;
   border-top: 1px solid var(--border-primary);
   margin: 1.5em 0;
@@ -642,22 +642,22 @@
 }
 
 /* Selection */
-.sidebar-note-editor ::selection {
+.sidekick-editor ::selection {
   background: rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="dark"] .sidebar-note-editor ::selection {
+[data-theme="dark"] .sidekick-editor ::selection {
   background: rgba(255, 255, 255, 0.15);
 }
 
 /* Gapcursor */
-.sidebar-note-editor .ProseMirror-gapcursor {
+.sidekick-editor .ProseMirror-gapcursor {
   display: none;
   pointer-events: none;
   position: absolute;
 }
 
-.sidebar-note-editor .ProseMirror-gapcursor:after {
+.sidekick-editor .ProseMirror-gapcursor:after {
   content: '';
   display: block;
   position: absolute;

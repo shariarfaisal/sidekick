@@ -1,5 +1,5 @@
 {
-  "name": "sidebar-note",
+  "name": "sidekick",
   "version": "1.0.0",
   "description": "A minimal, professional markdown note-taking Chrome extension in the browser side panel",
   "private": true,

@@ -1,4 +1,4 @@
-const DB_NAME = 'SidebarNoteImages';
+const DB_NAME = 'SidekickImages';
 const DB_VERSION = 1;
 const STORE_NAME = 'images';
 

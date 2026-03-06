@@ -3,9 +3,9 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER_DIR="$SCRIPT_DIR/terminal-server"
-SERVICE_NAME="com.sidebar-note.server"
+SERVICE_NAME="com.sidekick.server"
 
-echo "=== Sidebar Note Setup ==="
+echo "=== Sidekick Setup ==="
 echo ""
 
 # 1. Install dependencies
@@ -24,7 +24,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
   # macOS: launchd
   PLIST_DIR="$HOME/Library/LaunchAgents"
   PLIST_FILE="$PLIST_DIR/$SERVICE_NAME.plist"
-  LOG_DIR="$HOME/Library/Logs/sidebar-note"
+  LOG_DIR="$HOME/Library/Logs/sidekick"
   mkdir -p "$PLIST_DIR" "$LOG_DIR"
 
   # Stop existing service if running
@@ -73,7 +73,7 @@ elif [[ "$OSTYPE" == "linux"* ]]; then
 
   cat > "$SERVICE_FILE" <<SERVICE
 [Unit]
-Description=Sidebar Note Server
+Description=Sidekick Server
 After=network.target
 
 [Service]

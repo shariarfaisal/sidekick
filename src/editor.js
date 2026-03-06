@@ -487,7 +487,7 @@ export function createEditor(element, onChange) {
     ],
     editorProps: {
       attributes: {
-        class: 'sidebar-note-editor',
+        class: 'sidekick-editor',
         spellcheck: 'true',
       },
       handleDrop(view, event) {

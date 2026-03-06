@@ -1,4 +1,4 @@
-# Sidebar Note
+# Sidekick
 
 A Chrome extension that provides a minimal markdown note-taking editor, AI writing assistant, and a built-in terminal in the browser's side panel.
 
@@ -29,7 +29,7 @@ A Chrome extension that provides a minimal markdown note-taking editor, AI writi
 ### One-Command Setup
 
 ```bash
-git clone <repo-url> && cd sidebar-note
+git clone <repo-url> && cd sidekick
 gh auth login          # authenticate for AI features (one-time)
 ./setup.sh             # installs deps, builds, starts background server
 ```
@@ -65,7 +65,7 @@ Supported platforms: **macOS** (launchd) and **Linux** (systemd).
 
 ## MCP Setup (AI Agent Integration)
 
-Sidebar Note includes an MCP (Model Context Protocol) server that lets AI agents like Claude and GitHub Copilot control your browser and manage your notes programmatically. The MCP server exposes tools for browser automation (click, type, navigate, screenshot, etc.) and full notes CRUD.
+Sidekick includes an MCP (Model Context Protocol) server that lets AI agents like Claude and GitHub Copilot control your browser and manage your notes programmatically. The MCP server exposes tools for browser automation (click, type, navigate, screenshot, etc.) and full notes CRUD.
 
 ### For Claude Code (CLI)
 
@@ -78,7 +78,7 @@ To add it manually to Claude Code's global config (`~/.claude.json`):
   "mcpServers": {
     "browser-control": {
       "command": "node",
-      "args": ["/absolute/path/to/sidebar-note/terminal-server/mcp-server.js"]
+      "args": ["/absolute/path/to/sidekick/terminal-server/mcp-server.js"]
     }
   }
 }
@@ -96,7 +96,7 @@ Add the following to your Claude Desktop config file:
   "mcpServers": {
     "browser-control": {
       "command": "node",
-      "args": ["/absolute/path/to/sidebar-note/terminal-server/mcp-server.js"]
+      "args": ["/absolute/path/to/sidekick/terminal-server/mcp-server.js"]
     }
   }
 }
@@ -113,7 +113,7 @@ Add the following to your Claude Desktop config file:
   "github.copilot.chat.mcpServers": {
     "browser-control": {
       "command": "node",
-      "args": ["/absolute/path/to/sidebar-note/terminal-server/mcp-server.js"]
+      "args": ["/absolute/path/to/sidekick/terminal-server/mcp-server.js"]
     }
   }
 }
